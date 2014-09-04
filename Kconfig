@@ -1,0 +1,7 @@
+config SECURITY_RBAC
+	bool "rbac"
+	default y
+	help
+	  This selects RBAC, which extends DAC support with additional
+	  system-wide security settings beyond regular Linux discretionary
+	  access controls.
