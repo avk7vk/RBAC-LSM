@@ -38,6 +38,9 @@
 #include <linux/shm.h>
 #include <linux/binfmts.h>
 #include <linux/string.h>
+#include <linux/fs.h>
+
+#include <rbac.h>
 
 /*
  * Inode hooks

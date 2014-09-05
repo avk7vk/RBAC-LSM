@@ -10,6 +10,8 @@
 
 int add_user_to_role(int ruid, char *role);
 void read_user_to_role();
+int add_rule_to_role(char *role, char* func, char *file_name);
+void readall_rule_to_role(char *role) ;
 
 void disp_error() {
 
@@ -43,12 +45,13 @@ int main(int argc, char *argv[])
   		 case 2 :printf("Adding a Rule to Role\n");
            		 if(argc !=5)
    		 			disp_error();
-           		 {
-   		 			char * role = argv[2];
-   		 			int func = (int) strtol(argv[3] ,NULL , 10);
-   		 			char *fname = argv[4];
-   		 			printf("Role : %s Function : %d File Name : %s\n",role, func, fname);
-   		 		}
+           	{
+       		 			char* role = argv[2];
+       		 			char* func = argv[3];
+       		 			char* fname = argv[4];
+       		 			printf("Role : %s Function : %s File Name : %s\n",role, func, fname);
+                add_rule_to_role(role, func, fname);
+   		 		  }
            		 break;   
          /* Delete a Role */
          case 3 : printf("Delete a Role\n"); 
@@ -61,12 +64,20 @@ int main(int argc, char *argv[])
    		 				disp_error();
          			break;
           /* Read all user -> roles */
-         case 5 : printf("Delete a Rule\n"); 
+         case 5 : printf("Read User Roles a Rule\n"); 
          			if(argc !=2)
    		 				disp_error();
-
          			read_user_to_role();
          			break;
+          /* Read all roles -> rules */
+         case 6 : printf("Read Roles to Rule\n"); 
+              if(argc !=3)
+              disp_error();
+            {
+              char *role = argv[2];
+              readall_rule_to_role(role);
+             }
+              break;
          default:printf("Invalid Option : %d\n", c);
   	 }
 
@@ -82,7 +93,7 @@ int add_user_to_role(int ruid, char *role)
     void* buf = (void *)malloc(rec_size);
     int wrBytes = 0;
 
-    sourceFile = open("/tmp/users", O_RDWR|O_CREAT|O_APPEND);
+    sourceFile = open("/tmp/users", O_RDWR|O_CREAT|O_APPEND, S_IRWXU);
     
     if(sourceFile < 0)
     {
@@ -96,8 +107,11 @@ int add_user_to_role(int ruid, char *role)
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
-    	return -1;
+    	close(sourceFile);
+      return -1;
     }
+
+    close(sourceFile);
     return 0;
 
 }
@@ -130,7 +144,7 @@ void read_user_to_role()
 	    memcpy(role, (buf + (ruid_sz)), slen);
 	    printf("ruid : %d role : %s\n", ruid, role);
     };
-
+    close(sourceFile);
 }
 
 int add_rule_to_role(char *role, char* func, char *file_name) 
@@ -141,8 +155,12 @@ int add_rule_to_role(char *role, char* func, char *file_name)
 	unsigned int rec_size = slen + slen;
   void* buf = (void *)malloc(rec_size);
   int wrBytes = 0;
+  char role_file[50];
+  strcpy(role_file, "/tmp/roles/");
+  strcat(role_file, role);
+  printf("ROLE file : %s\n", role_file);
 
-  sourceFile = open(strcat("/tmp/roles/", role), O_RDWR|O_CREAT|O_APPEND);
+  sourceFile = open(role_file, O_RDWR|O_CREAT|O_APPEND, S_IRWXU);
     
     if(sourceFile < 0)
     {
@@ -150,14 +168,17 @@ int add_rule_to_role(char *role, char* func, char *file_name)
         return -1;
     }
     printf("Int func size %d\n", sizeof(int));
-    memcpy(buf , (void *) &func, strlen(func)+1);
+    memcpy(buf , func, strlen(func)+1);
     memcpy(buf + slen , file_name, strlen(file_name)+1);
     printf("role : %s func : %s file : %s\n", role, (char *)buf, (char *)(buf + (slen)));
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
+      close(sourceFile);
     	return -1;
     }
+
+    close(sourceFile);
   return 0;
 
 }
@@ -170,22 +191,27 @@ void readall_rule_to_role(char *role)
   unsigned int rec_size = slen + slen;
   void* buf = (void *)malloc(rec_size);
   int rdBytes = 0;
-
-  sourceFile = open(strcat("/tmp/roles/", role), O_RDONLY);
+  char role_file[50];
+  strcpy(role_file, "/tmp/roles/");
+  strcat(role_file, role);
+  printf("ROLE file : %s\n", role_file);
+  sourceFile = open(role_file, O_RDONLY);
     
     if(sourceFile < 0)
     {
         printf("Error opening source file %d\n", sourceFile);
-        return -1;
+        return ;
     }
     printf("**********For the Role : %s ********\n", role);
-    while((rdBytes = write(sourceFile, buf, rec_size) > 0) {
+    while((rdBytes = read(sourceFile, buf, rec_size)) > 0) {
       if ( rdBytes != rec_size){
-        printf("Partial Write Error\n");
-        return -1;
+        printf("Partial Read Error\n");
+        close(sourceFile);
+        return ;
       }
       printf("func : %s file : %s\n", (char *)buf, (char *)(buf + (slen)));
     }
-  return 0;
+  close(sourceFile);
+  return;
 
 }
