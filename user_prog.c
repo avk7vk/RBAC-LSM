@@ -133,16 +133,16 @@ void read_user_to_role()
 
 }
 
-int add_rule_to_role(char *role, int func, char *file_name) 
+int add_rule_to_role(char *role, char* func, char *file_name) 
 {	
 	int sourceFile;
-	unsigned int func_sz = sizeof(int);
+	//unsigned int func_sz = sizeof(int);
 	unsigned int slen = (21 * sizeof(char));
-	unsigned int rec_size = func_sz + slen;
-    void* buf = (void *)malloc(rec_size);
-    int wrBytes = 0;
+	unsigned int rec_size = slen + slen;
+  void* buf = (void *)malloc(rec_size);
+  int wrBytes = 0;
 
-    sourceFile = open(strcat("/tmp/roles/", role), O_RDWR|O_CREAT|O_APPEND);
+  sourceFile = open(strcat("/tmp/roles/", role), O_RDWR|O_CREAT|O_APPEND);
     
     if(sourceFile < 0)
     {
@@ -150,14 +150,42 @@ int add_rule_to_role(char *role, int func, char *file_name)
         return -1;
     }
     printf("Int func size %d\n", sizeof(int));
-    memcpy(buf , (void *) &func, func_sz);
-    memcpy(buf + func_sz , role, strlen(file_name)+1);
-    printf("role : %s func : %d file : %s\n", role, *(int*)buf, (char *)(buf + (func_sz)));
+    memcpy(buf , (void *) &func, strlen(func)+1);
+    memcpy(buf + slen , file_name, strlen(file_name)+1);
+    printf("role : %s func : %s file : %s\n", role, (char *)buf, (char *)(buf + (slen)));
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
     	return -1;
     }
-    return 0;
+  return 0;
+
+}
+
+void readall_rule_to_role(char *role) 
+{ 
+  int sourceFile;
+  //unsigned int func_sz = sizeof(int);
+  unsigned int slen = (21 * sizeof(char));
+  unsigned int rec_size = slen + slen;
+  void* buf = (void *)malloc(rec_size);
+  int rdBytes = 0;
+
+  sourceFile = open(strcat("/tmp/roles/", role), O_RDONLY);
+    
+    if(sourceFile < 0)
+    {
+        printf("Error opening source file %d\n", sourceFile);
+        return -1;
+    }
+    printf("**********For the Role : %s ********\n", role);
+    while((rdBytes = write(sourceFile, buf, rec_size) > 0) {
+      if ( rdBytes != rec_size){
+        printf("Partial Write Error\n");
+        return -1;
+      }
+      printf("func : %s file : %s\n", (char *)buf, (char *)(buf + (slen)));
+    }
+  return 0;
 
 }
