@@ -40,7 +40,7 @@
 #include <linux/string.h>
 #include <linux/fs.h>
 
-#include <rbac.h>
+#include "rbac.h"
 
 /*
  * Inode hooks
@@ -103,22 +103,37 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
 	const struct cred *ecred= ts->cred;
+	int ruid = (int)rcred->uid.val;
+
 	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
 	printk(KERN_DEBUG "File Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
-		if(((int)rcred->uid.val) != 0 || ((int)rcred->uid.val) != 1000) {
-			printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-			return -EACCES;
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			
+			if(!read_role(ruid, role)) {
+				if(!user_permitted (role, __func__, name)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
 		}
 	//}
 	//printk(KERN_DEBUG "Object Name: %s\t uid: %d \t gid: %d\n",name, (int)fuid, (int)fgid);
-	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
-	printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
-	printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
-	printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
+	
+	//printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
+	//printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
+	//printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
 		
-	exit:
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCESS;
 }
 /**
  * rbac_inode_link - rbac check on link
@@ -155,22 +170,37 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
 	const struct cred *ecred= ts->cred;
+	int ruid = (int)rcred->uid.val;
+
 	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
 	printk(KERN_DEBUG "File Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
-		if(((int)rcred->uid.val) != 0 || ((int)rcred->uid.val) != 1000) {
-			printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-			return -EACCES;
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			
+			if(!read_role(ruid, role)) {
+				if(!user_permitted (role, __func__, name)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
 		}
 	//}
 	//printk(KERN_DEBUG "Object Name: %s\t uid: %d \t gid: %d\n",name, (int)fuid, (int)fgid);
-	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
-	printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
-	printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
-	printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
 	
-	exit:
+	//printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
+	//printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
+	//printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCESS;
 }
 /**
  * rbac_inode_symlink

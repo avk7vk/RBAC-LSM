@@ -1,7 +1,3 @@
-#include <linux/fs.h>
-#include <linux/string.h>
-#include <linux/slab.h>
-
 enum {
 
 	INODE_ALLOC_SECURITY,
@@ -43,6 +39,8 @@ int read_role(int ruid, char * role) {
 	mm_segment_t oldfs;
 
 
+	printk(KERN_DEBUG "*************IN %s\n",__func__);
+	printk(KERN_DEBUG "For ruid : %d\n",ruid);
     oldfs=get_fs();
     set_fs(KERNEL_DS);
 	fout=filp_open("/tmp/users", O_RDONLY, 0);
@@ -58,8 +56,9 @@ int read_role(int ruid, char * role) {
     	memcpy((void *) &user_ruid, buf, ruid_sz);
     	
     	if(ruid == user_ruid) {
-    		flag == 1;
+    		flag = 1;
     		memcpy(role, (buf + (ruid_sz)), slen);
+    		printk(KERN_DEBUG "Role Found : %s\n",role);
     		break;
     	}
     }
@@ -69,7 +68,7 @@ int read_role(int ruid, char * role) {
     kfree(buf);
 
     if(flag == 0) {
-    	role == NULL;
+    	role = NULL;
     	return -1;
     }
     else return 0;
@@ -82,11 +81,15 @@ int user_permitted (char * role, char * fun_name, char * file_name) {
 	unsigned int buflen = 2 * slen; 
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
+	char role_file[50];
+	strcpy(role_file, "/tmp/roles/");
+	strcat(role_file, role);
 
-
+	printk(KERN_DEBUG "*************IN %s\n",__func__);
+	printk(KERN_DEBUG "For role : %s\n",role);
     oldfs=get_fs();
     set_fs(KERNEL_DS);
-	fout=filp_open(strcat("/tmp/roles/", role), O_RDONLY, 0);
+	fout=filp_open(role_file, O_RDONLY, 0);
     
     if(!fout||IS_ERR(fout))
     {
@@ -96,8 +99,9 @@ int user_permitted (char * role, char * fun_name, char * file_name) {
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
     	
-    	if(!strcmp(fun_name, (char *)buf) && !strcmp(fun_name, (char *)(buf+slen)) {
-    		flag == 1;
+    	if(!strcmp(fun_name, (char *)buf) && !strcmp(file_name, (char *)(buf+slen))) {
+    		printk(KERN_DEBUG "Rule found func : %s file : %s \n",fun_name, file_name);
+    		flag = 1;
     		break;
     	}
     }
