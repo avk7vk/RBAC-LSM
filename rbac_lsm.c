@@ -134,7 +134,7 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 
 	exit_err:
 	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-	return -1;
+	return -EACCES;
 }
 /**
  * rbac_inode_link - rbac check on link
@@ -202,7 +202,7 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 
 	exit_err:
 	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-	return -1;
+	return -EACCES;
 }
 /**
  * rbac_inode_symlink

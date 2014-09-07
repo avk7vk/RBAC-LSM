@@ -84,12 +84,11 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
 	unsigned int ino_sz = sizeof(unsigned long);
 	unsigned int slen = MAX_NAME_LENGTH * sizeof(char);
 	unsigned int buflen = ino_sz + slen; 
-	unsigned int f_len = 50 *sizeof(char);
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
 	char role_file[50];
 	char *fname = NULL;
-	char *file_name = dentry->d_name.name;
+	const char *file_name = dentry->d_name.name;
 	unsigned long ino_no = 0;
 
 
@@ -108,7 +107,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
 		struct inode* p_inode = parent->d_inode;
 		ino_no = (unsigned long) p_inode->i_ino;
 		printk(KERN_DEBUG"File: %s Doesnt Exists \n", file_name);
-		printk(KERN_DEBUG"But Parent: %s Exits with inode:%lu\n" \
+		printk(KERN_DEBUG"But Parent: %s Exits with inode:%lu\n", \
 			parent->d_name.name, ino_no );
 	}
 
@@ -126,7 +125,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
     		printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
-    	if(!strcmp(fun_name, (char *)buf) && !(ino_no == *(unsigned long*)(buf+slen))) {
+    	if(!strcmp(fun_name, (char *)buf) && (ino_no == *(unsigned long*)(buf+slen))) {
     		printk(KERN_DEBUG "Rule found! func : %s file ino: %lu \n",fun_name, ino_no);
     		flag = 1;
     		break;
