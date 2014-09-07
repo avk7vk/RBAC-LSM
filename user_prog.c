@@ -16,6 +16,7 @@ int delete_user_to_role(int ruid, char *role) ;
 int add_rule_to_role(char *role, char* func, char *file_name);
 void readall_rule_to_role(char *role) ;
 int delete_rule_to_role(char *role, char* func, char *file_name) ;
+int add_domains(char *file_name) ;
 
 void disp_error() {
 
@@ -95,6 +96,16 @@ int main(int argc, char *argv[])
               readall_rule_to_role(role);
              }
               break;
+          /*Add a domain */       
+       case 7 :printf("Adding a dir to Domains\n");
+               if(argc !=3)
+            disp_error();
+            {
+                char* fname = argv[2];
+                printf("File Name : %s\n",fname);
+                add_domains(fname);
+            }
+               break; 
 
          default:printf("Invalid Option : %d\n", c);
   	 }
@@ -386,4 +397,49 @@ int delete_rule_to_role(char *role, char* func, char *file_name)
   }
   free(buf);
   return 0;
+
+}
+
+int add_domains(char *file_name) 
+{ 
+  int sourceFile;
+  unsigned int ino_sz = sizeof(unsigned long);
+  unsigned int slen = (21 * sizeof(char));
+  unsigned int rec_size = ino_sz + slen;
+  void* buf = (void *)malloc(rec_size);
+  int wrBytes = 0;
+  struct stat ino_stat;
+  unsigned long ino = 0;
+  int err=0;
+
+  if((err = stat(file_name, &ino_stat))) {
+    printf("Error occured in stating File_name: %s Error :%d\n", file_name, err);
+    goto exit_err;
+  }
+  ino = (unsigned long)ino_stat.st_ino;
+  printf("Dir : %s Inode number is %ld \n", file_name, (long)ino_stat.st_ino);
+
+  sourceFile = open("/etc/rbac/dir_domains", O_RDWR|O_CREAT|O_APPEND, 00755);
+    
+    if(sourceFile < 0)
+    {
+        printf("Error opening source file %d\n", sourceFile);
+        return -1;
+    }
+    memcpy(buf , &ino, ino_sz);
+    memcpy(buf + ino_sz ,file_name, strlen(file_name)+1);
+
+    printf("file name : %s file  inode: %lu \n", (char *)(buf + ino_sz),
+      *(unsigned long *)(buf ));
+    wrBytes = write(sourceFile, buf, rec_size);
+    if ( wrBytes != rec_size){
+      printf("Partial Write Error\n");
+      close(sourceFile);
+      return -1;
+    }
+    exit_err:
+    close(sourceFile);
+    free(buf);
+  return 0;
+
 }

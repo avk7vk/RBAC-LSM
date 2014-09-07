@@ -93,11 +93,6 @@ static int rbac_inode_init_security(struct inode *inode, struct inode *dir,
  */
 static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t mode)
 {
-/*
-	struct inode *in = dentry->d_inode;
-	uid_t fuid= in->i_uid.val;
-	gid_t fgid= in->i_gid.val;
-	*/
 	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
@@ -110,24 +105,21 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
 		if(((int)rcred->uid.val) != 0) {
 			char role[21];
-			
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"FIle is not in Domain %s\n", name);
+				goto exit_norm;
+			}
 			if(!read_role(ruid, role)) {
 				// Important keeping it to permit all except option
-				if(user_permitted (role, __func__, dentry)) {
+
+				if(!user_permitted (role, __func__, dentry, 1)) {
 					goto exit_norm;
 				}
 				else goto exit_err;
 			}
-			// Important keeping it to permit all except option
-			//else goto exit_err;
+			else goto exit_err;
 			
 		}
-	//}
-	//printk(KERN_DEBUG "Object Name: %s\t uid: %d \t gid: %d\n",name, (int)fuid, (int)fgid);
-	
-	//printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
-	//printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
-	//printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
 		
 	exit_norm:
 	return 0;
@@ -161,11 +153,7 @@ static int rbac_inode_link(struct dentry *old_dentry, struct inode *dir,
  */
 static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 {
-	/*
-	struct inode *in = dentry->d_inode;
-	uid_t fuid= in->i_uid.val;
-	gid_t fgid= in->i_gid.val;
-	*/
+	
 	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
@@ -178,24 +166,21 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
 		if(((int)rcred->uid.val) != 0) {
 			char role[21];
-			
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"FIle is not in Domain %s\n", name);
+				goto exit_norm;
+			}
 			if(!read_role(ruid, role)) {
 				// Important keeping it to permit all except option
-				if(user_permitted (role, __func__, dentry)) {
+
+				if(!user_permitted (role, __func__, dentry, 0)) {
 					goto exit_norm;
 				}
 				else goto exit_err;
 			}
-			// Important keeping it to permit all except option
-			//else goto exit_err;
+			else goto exit_err;
 			
 		}
-	//}
-	//printk(KERN_DEBUG "Object Name: %s\t uid: %d \t gid: %d\n",name, (int)fuid, (int)fgid);
-	
-	//printk(KERN_DEBUG "Process Real Effective creds euid: %d \t egid: %d\n", (int)rcred->euid.val, (int)rcred->egid.val);
-	//printk(KERN_DEBUG "Process Effective creds ruid: %d \t rgid: %d\n", (int)ecred->uid.val, (int)ecred->gid.val);
-	//printk(KERN_DEBUG "Process Effective creds euid: %d \t egid: %d\n", (int)ecred->euid.val, (int)ecred->egid.val);
 		
 	exit_norm:
 	return 0;
@@ -452,9 +437,9 @@ static struct security_operations rbac_ops = {
 	.inode_alloc_security = 	rbac_inode_alloc_security,
 	.inode_free_security = 		rbac_inode_free_security,
 	.inode_init_security = 		rbac_inode_init_security,
-	.inode_create =			rbac_inode_create,
+	.inode_create =			rbac_inode_create, //implemented
 	.inode_link = 			rbac_inode_link,
-	.inode_unlink = 		rbac_inode_unlink,
+	.inode_unlink = 		rbac_inode_unlink, //implemented
 	.inode_symlink =		rbac_inode_symlink,
 	.inode_mkdir =			rbac_inode_mkdir,
 	.inode_rmdir = 			rbac_inode_rmdir,

@@ -78,7 +78,7 @@ int read_role(int ruid, char * role) {
     else return 0;
 
 }
-int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
+int user_permitted (char * role, const char * fun_name, struct dentry *dentry, int par_check) {
 	int flag = 0, rbytes;
 	struct file *fout = NULL;
 	unsigned int ino_sz = sizeof(unsigned long);
@@ -102,7 +102,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
 	if(dentry->d_inode != NULL) {
 		ino_no = (unsigned long) dentry->d_inode->i_ino;
 	}
-	else {
+	else if(par_check == 1) {
 		struct dentry* parent = dentry->d_parent;
 		struct inode* p_inode = parent->d_inode;
 		ino_no = (unsigned long) p_inode->i_ino;
@@ -143,4 +143,59 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry) {
     else 
     	return 0;
 
+}
+
+int IS_IN_DOMAIN(struct dentry *dentry) {
+
+	int flag = 0, rbytes;
+	struct file *fout = NULL;
+	unsigned int  ino_sz = sizeof(unsigned long);
+	unsigned int slen = MAX_NAME_LENGTH * sizeof(char);
+	unsigned int buflen = ino_sz + slen; 
+	char *buf = kmalloc(buflen, GFP_KERNEL);
+	mm_segment_t oldfs;
+	struct dentry* tmp_dentry = dentry;
+	
+	printk(KERN_DEBUG "*************IN %s\n",__func__);
+  	oldfs=get_fs();
+    set_fs(KERNEL_DS);
+  	
+  	if(IS_ROOT(tmp_dentry)) {
+  		goto exit_err;
+  	}
+  	else {
+  		while(!IS_ROOT(tmp_dentry->d_parent)) {
+  			tmp_dentry = dentry->d_parent;
+  		}
+  	}
+
+   
+	
+	fout=filp_open("/etc/rbac/dir_domains", O_RDONLY, (mode_t) 00755);
+    
+    if(!fout||IS_ERR(fout))
+    {
+        printk("Error Opening the File : %d\n", (int)PTR_ERR(fout));
+        goto exit_err;
+    }
+
+    while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
+    	
+    	if(tmp_dentry->d_inode->i_ino ==  *(unsigned long *) buf) {
+    		flag = 1;
+    		printk(KERN_DEBUG "Dir domain Found! for : %s\n",(char *)(buf+ino_sz));
+    		break;
+    	}
+    }
+
+    exit_err:
+    if(fout != NULL)
+    	filp_close(fout, NULL);
+    set_fs(oldfs);
+    kfree(buf);
+
+    if(flag == 0) {
+    	return 0;
+    }
+    else return 1;
 }
