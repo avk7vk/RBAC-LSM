@@ -98,8 +98,7 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 	uid_t fuid= in->i_uid.val;
 	gid_t fgid= in->i_gid.val;
 	*/
-	const unsigned char *name = dentry->d_name.name;
-	
+	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
 	const struct cred *ecred= ts->cred;
@@ -113,12 +112,14 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 			char role[21];
 			
 			if(!read_role(ruid, role)) {
-				if(!user_permitted (role, __func__, name)) {
+				// Important keeping it to permit all except option
+				if(user_permitted (role, __func__, dentry)) {
 					goto exit_norm;
 				}
 				else goto exit_err;
 			}
-			else goto exit_err;
+			// Important keeping it to permit all except option
+			//else goto exit_err;
 			
 		}
 	//}
@@ -133,7 +134,7 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 
 	exit_err:
 	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-	return -EACCESS;
+	return -1;
 }
 /**
  * rbac_inode_link - rbac check on link
@@ -165,8 +166,7 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 	uid_t fuid= in->i_uid.val;
 	gid_t fgid= in->i_gid.val;
 	*/
-	const unsigned char *name = dentry->d_name.name;
-	
+	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
 	const struct cred *ecred= ts->cred;
@@ -180,12 +180,14 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 			char role[21];
 			
 			if(!read_role(ruid, role)) {
-				if(!user_permitted (role, __func__, name)) {
+				// Important keeping it to permit all except option
+				if(user_permitted (role, __func__, dentry)) {
 					goto exit_norm;
 				}
 				else goto exit_err;
 			}
-			else goto exit_err;
+			// Important keeping it to permit all except option
+			//else goto exit_err;
 			
 		}
 	//}
@@ -200,7 +202,7 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 
 	exit_err:
 	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
-	return -EACCESS;
+	return -1;
 }
 /**
  * rbac_inode_symlink

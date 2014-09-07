@@ -1,10 +1,12 @@
-#include<unistd.h>
-#include<stdio.h>
-#include<stdlib.h>
-#include<errno.h>
-#include<sys/stat.h> //mode_t
-#include<fcntl.h>
-#include<string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/stat.h> //mode_t
+#include <fcntl.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #define BUF_SIZE 4096
 
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
               readall_rule_to_role(role);
              }
               break;
+              
          default:printf("Invalid Option : %d\n", c);
   	 }
 
@@ -93,7 +96,7 @@ int add_user_to_role(int ruid, char *role)
     void* buf = (void *)malloc(rec_size);
     int wrBytes = 0;
 
-    sourceFile = open("/tmp/users", O_RDWR|O_CREAT|O_APPEND, S_IRWXU);
+    sourceFile = open("/etc/rbac/users", O_RDWR|O_CREAT|O_APPEND, 00755);
     
     if(sourceFile < 0)
     {
@@ -115,7 +118,7 @@ int add_user_to_role(int ruid, char *role)
     return 0;
 
 }
-void read_user_to_role() 
+void read_user_to_role()
 {	
 	int sourceFile;
 	unsigned int slen = (21 * sizeof(char));
@@ -126,7 +129,7 @@ void read_user_to_role()
     char * role = (char *) malloc(slen);
     int rdBytes = 0;
 
-    sourceFile = open("/tmp/users", O_RDONLY);
+    sourceFile = open("/etc/rbac/users", O_RDONLY);
     
     if(sourceFile < 0)
     {
@@ -150,17 +153,26 @@ void read_user_to_role()
 int add_rule_to_role(char *role, char* func, char *file_name) 
 {	
 	int sourceFile;
-	//unsigned int func_sz = sizeof(int);
+	unsigned int ino_sz = sizeof(unsigned long);
 	unsigned int slen = (21 * sizeof(char));
-	unsigned int rec_size = slen + slen;
+	unsigned int rec_size = ino_sz + slen;
   void* buf = (void *)malloc(rec_size);
   int wrBytes = 0;
   char role_file[50];
-  strcpy(role_file, "/tmp/roles/");
-  strcat(role_file, role);
-  printf("ROLE file : %s\n", role_file);
+  struct stat ino_stat;
+  unsigned long ino = 0;
+  int err=0;
 
-  sourceFile = open(role_file, O_RDWR|O_CREAT|O_APPEND, S_IRWXU);
+  strcpy(role_file, "/etc/rbac/roles/");
+  strcat(role_file, role);
+  if((err = stat(file_name, &ino_stat))) {
+    printf("Error occured in stating File_name: %s Error :%d\n", file_name, err);
+    goto exit_err;
+  }
+  ino = (unsigned long)ino_stat.st_ino;
+  printf("ROLE file : %s Inode number is %ld \n", role_file, (long)ino_stat.st_ino);
+
+  sourceFile = open(role_file, O_RDWR|O_CREAT|O_APPEND, 00755);
     
     if(sourceFile < 0)
     {
@@ -169,16 +181,18 @@ int add_rule_to_role(char *role, char* func, char *file_name)
     }
     printf("Int func size %d\n", sizeof(int));
     memcpy(buf , func, strlen(func)+1);
-    memcpy(buf + slen , file_name, strlen(file_name)+1);
-    printf("role : %s func : %s file : %s\n", role, (char *)buf, (char *)(buf + (slen)));
+    memcpy(buf + slen , &ino, ino_sz);
+    printf("role : %s func : %s file name : %s \
+     file  inode: %lu \n", role, (char *)buf,file_name, *(unsigned long *)(buf + (slen)));
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
       close(sourceFile);
     	return -1;
     }
-
+    exit_err:
     close(sourceFile);
+    free(buf);
   return 0;
 
 }
@@ -186,13 +200,13 @@ int add_rule_to_role(char *role, char* func, char *file_name)
 void readall_rule_to_role(char *role) 
 { 
   int sourceFile;
-  //unsigned int func_sz = sizeof(int);
+  unsigned int ino_sz = sizeof(unsigned long);
   unsigned int slen = (21 * sizeof(char));
-  unsigned int rec_size = slen + slen;
+  unsigned int rec_size = slen + ino_sz;
   void* buf = (void *)malloc(rec_size);
   int rdBytes = 0;
   char role_file[50];
-  strcpy(role_file, "/tmp/roles/");
+  strcpy(role_file, "/etc/rbac/roles/");
   strcat(role_file, role);
   printf("ROLE file : %s\n", role_file);
   sourceFile = open(role_file, O_RDONLY);
@@ -209,7 +223,7 @@ void readall_rule_to_role(char *role)
         close(sourceFile);
         return ;
       }
-      printf("func : %s file : %s\n", (char *)buf, (char *)(buf + (slen)));
+      printf("func : %s file ino: %lu\n", (char *)buf, *(unsigned long *)(buf + (slen)));
     }
   close(sourceFile);
   return;
