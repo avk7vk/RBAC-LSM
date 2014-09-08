@@ -1,10 +1,8 @@
 /*
- * RBAC Linux Security Module
+ * SBRBAC Linux Security Module
  *
- * Author: Kees Cook <keescook@chromium.org>
- *
- * Copyright (C) 2010 Canonical, Ltd.
- * Copyright (C) 2011 The Chromium OS Authors.
+ * Author: Vamsi Krishna Atluri <vamsikrishna.atluri@stonybrook.edu>
+ * ID 	 : 109597320
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2, as
@@ -315,7 +313,7 @@ static int rbac_inode_rename(struct inode *old_inode,
 	int ruid = (int)rcred->uid.val;
 
 	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
-	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "File Name : %s\n", name);
 	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
 		if(((int)rcred->uid.val) != 0) {

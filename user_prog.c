@@ -1,3 +1,14 @@
+/*
+ * SBRBAC Linux Security Module - USER MODULE
+ *
+ * Author: Vamsi Krishna Atluri <vamsikrishna.atluri@stonybrook.edu>
+ * ID    : 109597320
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2, as
+ * published by the Free Software Foundation.
+ *
+ */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +21,8 @@
 
 #define BUF_SIZE 4096
 
+
+void print_help();
 int add_user_to_role(int ruid, char *role);
 void read_user_to_role();
 int delete_user_to_role(int ruid, char *role) ;
@@ -19,18 +32,19 @@ void readall_rule_to_role(char *role) ;
 int delete_rule_to_role(char *role, char* func, char *file_name) ;
 int add_domains(char *file_name) ;
 
+
 void disp_error() {
 
 	printf("Invalid Arguments\n");
+  print_help();
 	exit(1);
 }
-
 int main(int argc, char *argv[])
 {
 	int c =0; 
 
-	if(argc <= 1) {
-		printf("Invalid Arguments\n");
+	if(argc == 1) {
+    print_help();
 		exit(1);
 	}
     switch(c = (int) strtol(argv[1], NULL , 10)){
@@ -121,7 +135,9 @@ int main(int argc, char *argv[])
           }
                break;
 
-         default:printf("Invalid Option : %d\n", c);
+         default:
+         printf("Invalid Option : %d\n", c);
+         print_help();
   	 }
 
   	 return 0;
@@ -515,5 +531,19 @@ int add_domains(char *file_name)
     close(sourceFile);
     free(buf);
   return 0;
+
+}
+
+void print_help() 
+{
+  printf("**********************SBRBAC ADMIN MODULE ************************\n\n");
+  printf("1) ./user_prog 1 <uid> <role> - Assign a Role to User \n\n");
+  printf("2) ./user_prog 2 <role> <func_name> <file/dir>  <0|1> - Assign a Policy to a Role \n\n");
+  printf("3) ./user_prog 3 <uid> <role> - Delete a User from a Role \n\n");
+  printf("4) ./user_prog 4 <role> <func_name> <file/dir> - Delete a Policy from a Role \n\n");
+  printf("5) ./user_prog 5 - Read All User to ROles Mapping \n\n");
+  printf("6) ./user_prog 6 <role> - Read All policies belonging to a Role \n\n");
+  printf("7) ./user_prog 7 <dir> - Assign a Dir to Domain of SBRBAC \n\n");
+  printf("8) ./user_prog 8 <uid> <role> - Assign an Active role user \n\n");
 
 }
