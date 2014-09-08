@@ -34,7 +34,7 @@ int read_role(int ruid, char * role) {
 	struct file *fout = NULL;
 	unsigned int ruid_sz = sizeof(int);
 	unsigned int slen = MAX_NAME_LENGTH * sizeof(char);
-	unsigned int buflen = ruid_sz+slen; 
+	unsigned int buflen = ruid_sz+slen +ruid_sz; 
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
 
@@ -50,14 +50,16 @@ int read_role(int ruid, char * role) {
     if(!fout||IS_ERR(fout))
     {
         printk("Error Opening the File : %d\n", (int)PTR_ERR(fout));
+        fout = NULL;
         goto exit_err;
     }
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
     	int user_ruid;
+		int act_role;
     	memcpy((void *) &user_ruid, buf, ruid_sz);
-    	
-    	if(ruid == user_ruid) {
+    	memcpy((void *) &act_role, (buf+(ruid_sz+slen)), ruid_sz);
+    	if(ruid == user_ruid && act_role == 1) {
     		flag = 1;
     		memcpy(role, (buf + (ruid_sz)), slen);
     		printk(KERN_DEBUG "Role Found : %s\n",role);
@@ -83,7 +85,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
 	struct file *fout = NULL;
 	unsigned int ino_sz = sizeof(unsigned long);
 	unsigned int slen = MAX_NAME_LENGTH * sizeof(char);
-	unsigned int buflen = ino_sz + slen; 
+	unsigned int buflen = ino_sz + slen+ slen; 
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
 	char role_file[50];
@@ -120,16 +122,33 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
     if(!fout||IS_ERR(fout))
     {
         printk("Error Opening the File : %d\n", (int)PTR_ERR(fout));
+        fout = NULL;
         goto exit_err;
     }
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
-    		printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
-    	if(!strcmp(fun_name, (char *)buf) && (ino_no == *(unsigned long*)(buf+slen))) {
-    		printk(KERN_DEBUG "Rule found! func : %s file ino: %lu \n",fun_name, ino_no);
-    		flag = 1;
-    		break;
-    	}
+    	printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
+    	if(!strcmp(fun_name, (char *)buf)) {
+    		
+    		if(ino_no == *(unsigned long*)(buf+slen)) {
+	    		printk(KERN_DEBUG "Rule found! func : %s file ino: %lu \n",fun_name, ino_no);
+	    		flag = 1;
+	    		break;
+    		}
+    		else {
+    			struct dentry* tmp_dentry= dentry;
+	    		while(!IS_ROOT(tmp_dentry)) {
+		    		tmp_dentry = tmp_dentry->d_parent;
+		    		if(tmp_dentry->d_inode->i_ino  == *(unsigned long*)(buf+slen)) {
+		    			flag = 1;
+		    			printk(KERN_DEBUG "Parent Rule found! func : %s file ino: %lu \n",
+		    				fun_name, ino_no);
+		    			goto exit_err;
+		    		}
+	    		}
+
+    		}
+    	} 
     }
 
     exit_err:
@@ -159,16 +178,19 @@ int IS_IN_DOMAIN(struct dentry *dentry) {
 	printk(KERN_DEBUG "*************IN %s\n",__func__);
   	oldfs=get_fs();
     set_fs(KERNEL_DS);
-  	
+
   	if(IS_ROOT(tmp_dentry)) {
   		goto exit_err;
   	}
   	else {
   		while(!IS_ROOT(tmp_dentry->d_parent)) {
-  			tmp_dentry = dentry->d_parent;
+  			tmp_dentry = tmp_dentry->d_parent;
   		}
   	}
 
+  	if(!tmp_dentry->d_inode) {
+  		goto exit_err;
+  	}
    
 	
 	fout=filp_open("/etc/rbac/dir_domains", O_RDONLY, (mode_t) 00755);
@@ -176,12 +198,13 @@ int IS_IN_DOMAIN(struct dentry *dentry) {
     if(!fout||IS_ERR(fout))
     {
         printk("Error Opening the File : %d\n", (int)PTR_ERR(fout));
+        fout = NULL;
         goto exit_err;
     }
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
     	
-    	if(tmp_dentry->d_inode->i_ino ==  *(unsigned long *) buf) {
+    	if(tmp_dentry->d_inode->i_ino ==  (*(unsigned long *) buf)) {
     		flag = 1;
     		printk(KERN_DEBUG "Dir domain Found! for : %s\n",(char *)(buf+ino_sz));
     		break;

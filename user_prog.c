@@ -13,6 +13,7 @@
 int add_user_to_role(int ruid, char *role);
 void read_user_to_role();
 int delete_user_to_role(int ruid, char *role) ;
+int assign_active_role(int ruid, char *role) ;
 int add_rule_to_role(char *role, char* func, char *file_name);
 void readall_rule_to_role(char *role) ;
 int delete_rule_to_role(char *role, char* func, char *file_name) ;
@@ -106,6 +107,17 @@ int main(int argc, char *argv[])
                 add_domains(fname);
             }
                break; 
+        /* Assign active Role */
+         case 8 : printf("Assign Active Role\n"); 
+              if(argc !=4)
+            disp_error();
+          {
+            int usr_id = (int) strtol(argv[2],NULL , 10);
+            char * role = argv[3];
+            printf("uid : %d Role : %s \n", usr_id, role);
+            assign_active_role(usr_id, role) ;
+          }
+               break;
 
          default:printf("Invalid Option : %d\n", c);
   	 }
@@ -118,7 +130,8 @@ int add_user_to_role(int ruid, char *role)
 	int sourceFile;
 	unsigned int slen = (21 * sizeof(char));
 	unsigned int ruid_sz = sizeof(int);
-	unsigned int rec_size = ruid_sz + slen;
+	unsigned int rec_size = ruid_sz + slen + ruid_sz;
+  int act_role = 0;
     void* buf = (void *)malloc(rec_size);
     int wrBytes = 0;
 
@@ -131,8 +144,10 @@ int add_user_to_role(int ruid, char *role)
     }
     printf("Int ruid size %d\n", sizeof(int));
     memcpy(buf, (void *) &ruid, ruid_sz);
-    memcpy((buf + (ruid_sz)), role, strlen(role) + 1);
-    printf("ruid : %d role : %s\n", *(int*)buf, (char *)(buf + (ruid_sz)) );
+    memcpy((buf + ruid_sz), role, strlen(role) + 1);
+    memcpy((buf + ruid_sz + slen), &act_role, ruid_sz);
+    printf("ruid : %d role : %s active role :%d\n", *(int*)buf, 
+      (char *)(buf + (ruid_sz)), *(int *)(buf + ruid_sz + slen) );
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
@@ -149,10 +164,10 @@ void read_user_to_role()
 	int sourceFile;
 	unsigned int slen = (21 * sizeof(char));
 	unsigned int ruid_sz = sizeof(int);
-	unsigned int rec_size = ruid_sz + slen;
+	unsigned int rec_size = ruid_sz + slen + ruid_sz;
     void* buf = (void *)malloc(rec_size);
-    int ruid = 0;
-    char * role = (char *) malloc(slen);
+    int ruid = 0, act_role = 0;
+    char *role = (char *) malloc(slen);
     int rdBytes = 0;
 
     sourceFile = open("/etc/rbac/users", O_RDONLY);
@@ -169,11 +184,13 @@ void read_user_to_role()
 	    	disp_error();
 	    }
 
-	    memcpy((void *) &ruid, buf, ruid_sz);
+	    memcpy(&ruid, buf, ruid_sz);
 	    memcpy(role, (buf + (ruid_sz)), slen);
-	    printf("ruid : %d role : %s\n", ruid, role);
+      memcpy(&act_role, (buf + (ruid_sz) + slen), ruid_sz);
+	    printf("ruid : %d role : %s act_role : %d\n", ruid, (char *)(buf + ruid_sz), act_role);
     };
     close(sourceFile);
+    free(buf);
 }
 
 int delete_user_to_role(int ruid, char *role) 
@@ -181,7 +198,7 @@ int delete_user_to_role(int ruid, char *role)
   int sourceFile, newFile;
   unsigned int slen = (21 * sizeof(char));
   unsigned int ruid_sz = sizeof(int);
-  unsigned int rec_size = ruid_sz + slen;
+  unsigned int rec_size = ruid_sz + slen + ruid_sz;
   void* buf = (void *)malloc(rec_size);
   int rdBytes = 0, wrBytes = 0;
   char * tmp_name = NULL;
@@ -214,7 +231,8 @@ int delete_user_to_role(int ruid, char *role)
       disp_error();
     }
     if((ruid == *(int *)buf) && !strcmp(role, (char *)buf+ruid_sz)) {
-      printf("Found! ruid : %d role : %s\n", ruid, role);
+      printf("Found! ruid : %d role : %s act_role :%d\n", ruid, 
+        role, *(int *)(buf+ruid_sz +slen));
       continue;
     }
     wrBytes = write(newFile, buf, rec_size);
@@ -239,6 +257,53 @@ int delete_user_to_role(int ruid, char *role)
   return 0;
 }
 
+int assign_active_role(int ruid, char *role) 
+{ 
+  int sourceFile;
+  unsigned int slen = (21 * sizeof(char));
+  unsigned int ruid_sz = sizeof(int);
+  unsigned int rec_size = ruid_sz + slen + ruid_sz;
+  void* buf = (void *)malloc(rec_size);
+  int rdBytes = 0, wrBytes = 0;
+  
+  printf("**********Assign Active Role**********\n");
+  sourceFile = open("/etc/rbac/users", O_RDWR);
+    
+    if(sourceFile < 0)
+    {
+        printf("Error opening source file %d\n", sourceFile);
+        disp_error();
+    }
+
+  while((rdBytes = read(sourceFile, buf, rec_size)) > 0){
+    if ( rdBytes != rec_size){
+      printf("Partial Read Error\n");
+      disp_error();
+    }
+    if((ruid == *(int *)buf)) {
+      printf("Found! ruid : %d role : %s act_role : %d\n", ruid, role, 
+        *(int *)(buf + ruid_sz + slen));
+      
+      if(!strcmp(role, (char *)(buf+ruid_sz))) {
+        *(int *)(buf + ruid_sz + slen) = 1;
+      }
+      else {
+        *(int *)(buf + ruid_sz + slen) = 0;
+      }
+      lseek(sourceFile, (off_t) (- rec_size), SEEK_CUR);
+      wrBytes = write(sourceFile, buf, rec_size);
+      if ( wrBytes != rec_size){
+        printf("Partial Write Error\n");
+        disp_error();
+      }
+
+    }
+          
+  }
+  close(sourceFile);
+  free(buf);
+  return 0;
+}
 int add_rule_to_role(char *role, char* func, char *file_name) 
 {	
 	int sourceFile;
