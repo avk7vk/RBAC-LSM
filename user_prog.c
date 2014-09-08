@@ -14,7 +14,7 @@ int add_user_to_role(int ruid, char *role);
 void read_user_to_role();
 int delete_user_to_role(int ruid, char *role) ;
 int assign_active_role(int ruid, char *role) ;
-int add_rule_to_role(char *role, char* func, char *file_name);
+int add_rule_to_role(char *role, char* func, char *file_name, int eflag);
 void readall_rule_to_role(char *role) ;
 int delete_rule_to_role(char *role, char* func, char *file_name) ;
 int add_domains(char *file_name) ;
@@ -49,14 +49,16 @@ int main(int argc, char *argv[])
    		 		
          /*Add a Role/ to a Role */  		 
   		 case 2 :printf("Adding a Rule to Role\n");
-           		 if(argc !=5)
+           		 if(argc !=6)
    		 			disp_error();
            	{
        		 			char* role = argv[2];
        		 			char* func = argv[3];
        		 			char* fname = argv[4];
-       		 			printf("Role : %s Function : %s File Name : %s\n",role, func, fname);
-                add_rule_to_role(role, func, fname);
+                int eflag = (int) strtol(argv[5], NULL,10);
+       		 			printf("Role : %s Function : %s File Name : %s eflag :%d\n"
+                  ,role, func, fname, eflag);
+                add_rule_to_role(role, func, fname,eflag);
    		 		  }
            		 break;   
          /* Delete a Role */
@@ -304,12 +306,13 @@ int assign_active_role(int ruid, char *role)
   free(buf);
   return 0;
 }
-int add_rule_to_role(char *role, char* func, char *file_name) 
+int add_rule_to_role(char *role, char* func, char *file_name, int eflag) 
 {	
 	int sourceFile;
+  unsigned int eflag_sz = sizeof(int);
 	unsigned int ino_sz = sizeof(unsigned long);
 	unsigned int slen = (21 * sizeof(char));
-	unsigned int rec_size = ino_sz + slen + slen;
+	unsigned int rec_size = ino_sz + slen + slen + eflag_sz;
   void* buf = (void *)malloc(rec_size);
   int wrBytes = 0;
   char role_file[50];
@@ -337,9 +340,12 @@ int add_rule_to_role(char *role, char* func, char *file_name)
     memcpy(buf , func, strlen(func)+1);
     memcpy(buf + slen , &ino, ino_sz);
     memcpy(buf + slen + ino_sz ,file_name, strlen(file_name)+1);
+    memcpy(buf + slen + ino_sz + slen ,&eflag, eflag_sz);
     printf("role : %s func : %s file name : %s "
-     "file  inode: %lu \n", role, (char *)buf,(char *)(buf + slen+ino_sz),
-      *(unsigned long *)(buf + (slen)));
+     "file  inode: %lu eflag :%d \n", role, (char *)buf,(char *)(buf + slen+ino_sz),
+      *(unsigned long *)(buf + (slen)), 
+      *(int *)(buf + (slen+ino_sz+slen)));
+
     wrBytes = write(sourceFile, buf, rec_size);
     if ( wrBytes != rec_size){
     	printf("Partial Write Error\n");
@@ -356,9 +362,10 @@ int add_rule_to_role(char *role, char* func, char *file_name)
 void readall_rule_to_role(char *role) 
 { 
   int sourceFile;
+  unsigned int eflag_sz = sizeof(int);
   unsigned int ino_sz = sizeof(unsigned long);
   unsigned int slen = (21 * sizeof(char));
-  unsigned int rec_size = slen + ino_sz + slen;
+  unsigned int rec_size = slen + ino_sz + slen + eflag_sz;
   void* buf = (void *)malloc(rec_size);
   int rdBytes = 0;
   char role_file[50];
@@ -380,8 +387,9 @@ void readall_rule_to_role(char *role)
         close(sourceFile);
         return ;
       }
-      printf("func : %s file ino: %lu file_name: %s\n", (char *)buf, 
-        *(unsigned long *)(buf + (slen)), (char *)(buf + slen + ino_sz));
+      printf("func : %s file ino: %lu file_name: %s eflag:%d\n", (char *)buf, 
+        *(unsigned long *)(buf + (slen)), (char *)(buf + slen + ino_sz), 
+        *(int *)(buf + slen + ino_sz+slen));
     }
   close(sourceFile);
   return;
@@ -391,9 +399,10 @@ void readall_rule_to_role(char *role)
 int delete_rule_to_role(char *role, char* func, char *file_name) 
 { 
   int sourceFile, newFile;
+  unsigned int eflag_sz = sizeof(int);
   unsigned int ino_sz = sizeof(unsigned long);
   unsigned int slen = (21 * sizeof(char));
-  unsigned int rec_size = slen + ino_sz + slen;
+  unsigned int rec_size = slen + ino_sz + slen +eflag_sz;
   void* buf = (void *)malloc(rec_size);
   int rdBytes = 0, wrBytes = 0, err = 0;
   char * tmp_name = NULL;
@@ -438,8 +447,8 @@ int delete_rule_to_role(char *role, char* func, char *file_name)
       disp_error();
     }
     if(!strcmp(func, (char *)buf) && (ino == *(unsigned long*)(buf+slen))) {
-      printf("Found! func : %s inode : %lu file :%s \n", (char *)buf, ino,
-        (char *)(buf + slen +ino_sz) );
+      printf("Found! func : %s inode : %lu file :%s eflag :%d\n", (char *)buf, ino,
+        (char *)(buf + slen +ino_sz), *(int *)(buf + slen +ino_sz+slen));
       continue;
     }
     wrBytes = write(newFile, buf, rec_size);

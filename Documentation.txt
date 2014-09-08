@@ -1,0 +1,67 @@
+============================================================
+SBRACK	(Stony	Brook	Role-based	Access	Control	Kernel)
+============================================================
+
+-----------
+Description
+-----------
+Role-based access control (RBAC) is a method of regulating access to computer or 
+network resources based on the roles of individual users within an enterprise. In 
+this context, access is the ability of an individual user to perform a specific task, 
+such as view, create, or modify a file. RBAC enables users to carry out a wide range 
+of authorized tasks by dynamically regulating their actions according to flexible 
+functions, relationships, and constraints. This is in contrast to conventional 
+methods of access control like DAC, which grant or revoke user access on a rigid, 
+object-by-object basis. In RBAC, roles can be easily created, changed, or is 
+continued as the needs of the enterprise evolve, without having to individually 
+update the privileges for every user.
+
+Three primary rules are defined for RBAC:
+
+- Role assignment: A subject can exercise a permission only if the subject has 
+	selected or been assigned a role.
+- Role authorization: A subject's active role must be authorized for the subject. 
+	With rule 1 above, this rule ensures that users can take on only roles for which 
+	they are authorized.
+- Permission authorization: A subject can exercise a permission only if the permission
+	is authorized for the subject's active role. With rules 1 and 2, this rule ensure
+	that users can exercise only permissions for which they are authorized.
+
+-------
+Design
+-------
+This current implementation of RBAC aims for a simple RBAC model that has domain, a subset of the filesystem not the whole filesystem.
+It takes the following design assumptions :
+
+- This RBAC Model will support only a few specified directories as specified in the '/etc/rbac/dir_domains'. 
+- Directories with permision to "rbac_inode_create" imply that users with this rule in their active role are able to create new files/directory in this directory. 
+- The list of users, roles and rules will be stored in '/etc/rbac/'.
+- This module concerns only about the inode acess control with an exception of 
+	special files like symlinks, Hardlinks, Devices etc. 
+- This module will support the following functions :
+	a. rbac_inode_create
+	b. rbac_inode_unlink
+	c. rbac_inode_mkdir
+	d. rbac_inode_rmdir
+	e. rbac_inode_rename
+- At any moment a user will have only one 'Active Role'.
+- An Admin can use the program 'user_prog' to perform various functions of modifying 
+	the policies.
+- The list of functions available for Admin are :
+	a. Add User to Role
+	b. Delete a Role from User 
+	c. Read All User -> Roles Mapping
+	d. Assign an Active Role to a User
+	e. Add a Rule to a Role
+	f. Delete an Exsisting Rule from a Role
+	g. Read all Rules belonging to a Role
+-----------------
+Implementation
+-----------------
+This RBAC Model is implemented as a Linux Kernel Module using Linux Security Modules
+(LSM) interface. The module is an inbuit kernel Module. 
+-----------
+References
+-----------
+http://searchsecurity.techtarget.com/definition/role-based-access-control-RBAC
+

@@ -96,7 +96,6 @@ static int rbac_inode_create(struct inode *dir, struct dentry *dentry, umode_t m
 	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
-	const struct cred *ecred= ts->cred;
 	int ruid = (int)rcred->uid.val;
 
 	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
@@ -205,7 +204,39 @@ static int rbac_inode_symlink(struct inode *dir, struct dentry *dentry, const ch
  */
 static int rbac_inode_mkdir(struct inode *dir, struct dentry *dentry, umode_t mask)
 {
+	const char* name = dentry->d_name.name;
+	struct task_struct *ts = current;
+	const struct cred *rcred= ts->real_cred;
+	int ruid = (int)rcred->uid.val;
+
+	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
+	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
+	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+				goto exit_norm;
+			}
+			if(!read_role(ruid, role)) {
+				// Important keeping it to permit all except option
+
+				if(!user_permitted (role, __func__, dentry, 1)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
+		}
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCES;
 }
 /**
  * rbac_inode_rmdir - rbac check on directory deletion
@@ -217,8 +248,39 @@ static int rbac_inode_mkdir(struct inode *dir, struct dentry *dentry, umode_t ma
  */
 static int rbac_inode_rmdir(struct inode *dir, struct dentry *dentry)
 {
-	//printk(KERN_DEBUG "rbac: %s\n",__func__);
+	const char* name = dentry->d_name.name;
+	struct task_struct *ts = current;
+	const struct cred *rcred= ts->real_cred;
+	int ruid = (int)rcred->uid.val;
+
+	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
+	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
+	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+				goto exit_norm;
+			}
+			if(!read_role(ruid, role)) {
+				// Important keeping it to permit all except option
+
+				if(!user_permitted (role, __func__, dentry, 0)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
+		}
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCES;
 }
 /**
  * rbac_inode_mknod
@@ -246,8 +308,40 @@ static int rbac_inode_rename(struct inode *old_inode,
 			      struct inode *new_inode,
 			      struct dentry *new_dentry)
 {
-	//printk(KERN_DEBUG "rbac: %s\n",__func__);
+	const char* name = old_dentry->d_name.name;
+	struct dentry* dentry = old_dentry;
+	struct task_struct *ts = current;
+	const struct cred *rcred= ts->real_cred;
+	int ruid = (int)rcred->uid.val;
+
+	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
+	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
+	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+				goto exit_norm;
+			}
+			if(!read_role(ruid, role)) {
+				// Important keeping it to permit all except option
+
+				if(!user_permitted (role, __func__, dentry, 0)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
+		}
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCES;
 }
 /**
  * rbac_inode_readlink
@@ -291,8 +385,39 @@ static int rbac_inode_permission(struct inode *inode, int mask)
  */
 static int rbac_inode_setattr(struct dentry *dentry, struct iattr *iattr)
 {
-	//printk(KERN_DEBUG "rbac: %s\n",__func__);
+	const char* name = dentry->d_name.name;
+	struct task_struct *ts = current;
+	const struct cred *rcred= ts->real_cred;
+	int ruid = (int)rcred->uid.val;
+
+	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
+	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
+	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+				goto exit_norm;
+			}
+			if(!read_role(ruid, role)) {
+				// Important keeping it to permit all except option
+
+				if(!user_permitted (role, __func__, dentry, 0)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
+		}
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCES;
 }
 
 /**
@@ -304,8 +429,39 @@ static int rbac_inode_setattr(struct dentry *dentry, struct iattr *iattr)
  */
 static int rbac_inode_getattr(struct vfsmount *mnt, struct dentry *dentry)
 {
-	//printk(KERN_DEBUG "rbac: %s\n",__func__);
+	const char* name = dentry->d_name.name;
+	struct task_struct *ts = current;
+	const struct cred *rcred= ts->real_cred;
+	int ruid = (int)rcred->uid.val;
+
+	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
+	printk(KERN_DEBUG "Dir Name : %s\n", name);
+	printk(KERN_DEBUG "Process Real creds ruid: %d \t rgid: %d\n",(int)rcred->uid.val, (int)rcred->gid.val);
+	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
+		if(((int)rcred->uid.val) != 0) {
+			char role[21];
+			if(!IS_IN_DOMAIN(dentry)) {
+				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+				goto exit_norm;
+			}
+			if(!read_role(ruid, role)) {
+				// Important keeping it to permit all except option
+
+				if(!user_permitted (role, __func__, dentry, 0)) {
+					goto exit_norm;
+				}
+				else goto exit_err;
+			}
+			else goto exit_err;
+			
+		}
+		
+	exit_norm:
 	return 0;
+
+	exit_err:
+	printk(KERN_DEBUG "RBAC : Access Denied for File Name : %s\n", name);
+	return -EACCES;
 }
 
 /**
@@ -441,15 +597,15 @@ static struct security_operations rbac_ops = {
 	.inode_link = 			rbac_inode_link,
 	.inode_unlink = 		rbac_inode_unlink, //implemented
 	.inode_symlink =		rbac_inode_symlink,
-	.inode_mkdir =			rbac_inode_mkdir,
-	.inode_rmdir = 			rbac_inode_rmdir,
+	.inode_mkdir =			rbac_inode_mkdir, //implemented
+	.inode_rmdir = 			rbac_inode_rmdir, //implemented
 	.inode_mknod =			rbac_inode_mknod,
-	.inode_rename = 		rbac_inode_rename,
+	.inode_rename = 		rbac_inode_rename, //implemented
 	.inode_readlink =		rbac_inode_readlink,
 	.inode_follow_link =		rbac_inode_follow_link,
 	.inode_permission = 		rbac_inode_permission,
-	.inode_setattr = 		rbac_inode_setattr,
-	.inode_getattr = 		rbac_inode_getattr,
+	.inode_setattr = 		rbac_inode_setattr, //implemented
+	.inode_getattr = 		rbac_inode_getattr, //implemented
 	.inode_setxattr = 		rbac_inode_setxattr,
 	.inode_post_setxattr = 		rbac_inode_post_setxattr,
 	.inode_getxattr = 		rbac_inode_getxattr,

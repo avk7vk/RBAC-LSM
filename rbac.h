@@ -83,16 +83,17 @@ int read_role(int ruid, char * role) {
 int user_permitted (char * role, const char * fun_name, struct dentry *dentry, int par_check) {
 	int flag = 0, rbytes;
 	struct file *fout = NULL;
+	unsigned int eflag_sz = sizeof(int);
 	unsigned int ino_sz = sizeof(unsigned long);
 	unsigned int slen = MAX_NAME_LENGTH * sizeof(char);
-	unsigned int buflen = ino_sz + slen+ slen; 
+	unsigned int buflen = ino_sz + slen+ slen +eflag_sz; 
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
 	char role_file[50];
 	char *fname = NULL;
 	const char *file_name = dentry->d_name.name;
 	unsigned long ino_no = 0;
-
+	struct dentry *tmp_dentry = dentry;
 
 	strcpy(role_file, "/etc/rbac/roles/");
 	strcat(role_file, role);
@@ -116,6 +117,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
 	printk(KERN_DEBUG "For role : %s\n",role);
     printk(KERN_DEBUG "Given func : %s file : %s \n",fun_name, file_name);
     
+    startAgain:
 
 	fout=filp_open(role_file, O_RDONLY, (mode_t) 00755);
     
@@ -128,27 +130,27 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
     	printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
-    	if(!strcmp(fun_name, (char *)buf)) {
+    	if(!strcmp(fun_name, (char *)buf) && (ino_no == *(unsigned long*)(buf+slen))) {
     		
-    		if(ino_no == *(unsigned long*)(buf+slen)) {
+    		if((*(int *)(buf+slen+ino_sz+slen))) {
 	    		printk(KERN_DEBUG "Rule found! func : %s file ino: %lu \n",fun_name, ino_no);
 	    		flag = 1;
-	    		break;
+	    		goto exit_err;
     		}
     		else {
-    			struct dentry* tmp_dentry= dentry;
-	    		while(!IS_ROOT(tmp_dentry)) {
-		    		tmp_dentry = tmp_dentry->d_parent;
-		    		if(tmp_dentry->d_inode->i_ino  == *(unsigned long*)(buf+slen)) {
-		    			flag = 1;
-		    			printk(KERN_DEBUG "Parent Rule found! func : %s file ino: %lu \n",
-		    				fun_name, ino_no);
-		    			goto exit_err;
-		    		}
-	    		}
-
+    			printk(KERN_DEBUG "Negative Rule found! func : %s file ino: %lu \n",fun_name, ino_no);
+    			goto exit_err;
     		}
     	} 
+    }
+    if(flag == 0){
+    	tmp_dentry = tmp_dentry->d_parent;
+    	ino_no = tmp_dentry->d_inode->i_ino;
+    	if(!IS_ROOT(tmp_dentry)) {
+    		filp_close(fout, NULL);
+    		goto startAgain;
+
+    	}
     }
 
     exit_err:
