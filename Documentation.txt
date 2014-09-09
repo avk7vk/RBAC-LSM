@@ -21,27 +21,36 @@ update the privileges for every user.
 ==========
 2. Design
 ==========
-This current implementation of RBAC aims for a simple RBAC model that has domain, a subset of the filesystem not the whole filesystem.
+This current implementation of RBAC aims for a simple RBAC model that has domain, a 
+subset of the filesystem not the whole filesystem. The other part of filesystem not
+defined in the domain will work under the guidance DAC. 
 
-Three primary rules are defined for RBAC:
+Three primary rules are are satisfied by SBRBAC:
 
 - Role assignment: A subject can exercise a permission only if the subject has 
 	selected or been assigned a role.
 - Role authorization: A subject's active role must be authorized for the subject. 
 	With rule 1 above, this rule ensures that users can take on only roles for which 
 	they are authorized.
-- Permission authorization: A subject can exercise a permission only if the permission
-	is authorized for the subject's active role. With rules 1 and 2, this rule ensure
-	that users can exercise only permissions for which they are authorized.
+- Permission authorization: A subject can exercise a permission only if the 
+	permission 	is authorized for the subject's active role. With rules 1 and 2, this
+	rule ensure	that users can exercise only permissions for which they are authorized.
+
 =======================	
 2.1 Design Assumptions
 ======================= 
 
 - This RBAC Model will support only a few specified directories as specified in the 
-	'/etc/rbac/dir_domains'.
+	'/etc/rbac/dir_domains'. This list can be modified with the help of 
+	user utility.
 
-- Directories with permision to "rbac_inode_create" imply that users with this rule 
-	in their active role are able to create new files/directory in this directory. 
+- Existing Directories with permision to "rbac_inode_create" imply that users with 
+	this rule in their active role are able to create new files/directory in this 
+	directory. 
+
+- Existing Directories with permision to "rbac_inode_unlink" imply that users with 
+	this rule in their active role are able to delete files/directory in this 
+	directory. 
 
 - The list of users, roles and rules will be stored in '/etc/rbac/'.
 
@@ -59,7 +68,7 @@ Three primary rules are defined for RBAC:
 
 - At any moment a user will have only one or no 'Active Role'.
 
-- An Admin can use the program 'user_prog' to generate or modify the policies.
+- Admin can use the program 'user_prog' to generate or modify the policies.
 
 - The list of functions available for Admin are :
 	a. Add User to Role
@@ -69,6 +78,7 @@ Three primary rules are defined for RBAC:
 	e. Add a Rule to a Role
 	f. Delete an Exsisting Rule from a Role
 	g. Read all Rules belonging to a Role
+	h. Add a directory to Domain of RBAC
 
 - If for a user there is no policy related to an operation on a particular object 
 	then its parent directory's access policy is used instead.
@@ -161,10 +171,12 @@ uid : 1002 Role : manager
 4.2 User Utility code
 ======================= 
 1. Binary "user_prog" can be used right away to create new roles.
-2. To Predefined use predefined roles copy "rbac" folder to "/etc/"
+2. To Predefined use predefined roles & rules copy "rbac" folder to "/etc/"
 
 -----------
 References
 -----------
 http://searchsecurity.techtarget.com/definition/role-based-access-control-RBAC
+http://csrc.nist.gov/rbac/ferraiolo-kuhn-92.pdf
+http://www.cse.psu.edu/~tjaeger/cse443-s12/docs/ch2.pdf
 

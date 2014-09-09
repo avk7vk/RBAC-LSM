@@ -172,7 +172,7 @@ int add_user_to_role(int ruid, char *role)
     	close(sourceFile);
       return -1;
     }
-
+    assign_active_role(ruid, role);
     close(sourceFile);
     return 0;
 

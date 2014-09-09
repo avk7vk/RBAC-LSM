@@ -154,7 +154,6 @@ static int rbac_inode_unlink(struct inode *dir, struct dentry *dentry)
 	const char* name = dentry->d_name.name;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
-	const struct cred *ecred= ts->cred;
 	int ruid = (int)rcred->uid.val;
 
 	printk(KERN_DEBUG "***************RBAC: %s ************\n",__func__);
@@ -296,8 +295,7 @@ static int rbac_inode_mknod(struct inode *dir, struct dentry *dentry, umode_t mo
  * @new_inode: the new directory
  * @new_dentry: unused
  *
- * Read and write access is required on both the old and
- * new directories.
+ * unlink permission are checked in @old_dentry and create permission are checked in @new_dentry
  *
  * Returns 0 if access is permitted, an error code otherwise
  */
@@ -307,7 +305,6 @@ static int rbac_inode_rename(struct inode *old_inode,
 			      struct dentry *new_dentry)
 {
 	const char* name = old_dentry->d_name.name;
-	struct dentry* dentry = old_dentry;
 	struct task_struct *ts = current;
 	const struct cred *rcred= ts->real_cred;
 	int ruid = (int)rcred->uid.val;
@@ -318,14 +315,15 @@ static int rbac_inode_rename(struct inode *old_inode,
 	//if(!strcmp(name,"/tmp/file_avk") || !strcmp(name,"file_avk")) {
 		if(((int)rcred->uid.val) != 0) {
 			char role[21];
-			if(!IS_IN_DOMAIN(dentry)) {
-				printk(KERN_DEBUG"Dir is not in Domain %s\n", name);
+			if(!IS_IN_DOMAIN(old_dentry) && !IS_IN_DOMAIN(new_dentry)) {
+				printk(KERN_DEBUG"Dirs are not in Domain %s\n", name);
 				goto exit_norm;
 			}
 			if(!read_role(ruid, role)) {
 				// Important keeping it to permit all except option
 
-				if(!user_permitted (role, __func__, dentry, 0)) {
+				if(!user_permitted (role, "rbac_inode_unlink", old_dentry, 0) && 
+					!user_permitted (role, "rbac_inode_create", new_dentry, 1)) {
 					goto exit_norm;
 				}
 				else goto exit_err;

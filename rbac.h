@@ -1,31 +1,4 @@
-enum {
 
-	INODE_ALLOC_SECURITY,
-	INODE_FREE_SECURITY,
-	INODE_INIT_SECURITY,
-	INODE_CREATE,
-	INODE_LINK,
-	INODE_UNLINK,
-	INODE_SYMLINK,
-	INODE_MKDIR,
-	INODE_RMDIR,
-	INODE_MKNOD,
-	INODE_RENAME,
-	INODE_READLINK,
-	INODE_FOLLOW_LINK,
-	INODE_PERMISSION,
-	INODE_SETATTR,
-	INODE_GETATTR,
-	INODE_SETXATTR,
-	INODE_POST_SETXATTR,
-	INODE_GETXATTR,
-	INODE_LISTXATTR,
-	INODE_REMOVEXATTR,
-	INODE_GETSECURITY,
-	INODE_SETSECURITY,
-	INODE_LISTSECURITY,
-	INODE_GETSECID
-};
 #define MAX_NAME_LENGTH 21
 
 int read_role(int ruid, char * role) {
@@ -90,7 +63,6 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
 	char *buf = kmalloc(buflen, GFP_KERNEL);
 	mm_segment_t oldfs;
 	char role_file[50];
-	char *fname = NULL;
 	const char *file_name = dentry->d_name.name;
 	unsigned long ino_no = 0;
 	struct dentry *tmp_dentry = dentry;
@@ -129,7 +101,7 @@ int user_permitted (char * role, const char * fun_name, struct dentry *dentry, i
     }
 
     while ((rbytes=vfs_read(fout, buf, buflen, &fout->f_pos)) > 0 ) {
-    	printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
+    	//printk(KERN_DEBUG "Buffer func : %s file ino: %lu \n",(char *)buf, *(unsigned long *)(buf+slen));
     	if(!strcmp(fun_name, (char *)buf) && (ino_no == *(unsigned long*)(buf+slen))) {
     		
     		if((*(int *)(buf+slen+ino_sz+slen))) {
